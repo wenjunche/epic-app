@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMART on FHIR TypeScript EHR Launch Example</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Simple spinner for loading states */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="app-container" class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">SMART on FHIR EHR Launch</h1>
+            <p class="text-md text-gray-600 mt-2">A TypeScript example of the EHR launch flow.</p>
+        </header>
+
+        <!-- This section will be shown during the authorization process -->
+        <div id="authorizing-view" class="hidden text-center p-8 bg-white rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Authorizing...</h2>
+            <p class="text-gray-600 mb-6">Please wait while we securely connect to the EHR.</p>
+            <div class="loader mx-auto"></div>
+        </div>
+        
+        <!-- This section is for initiating the launch (for standalone testing) -->
+        <div id="launch-view" class="hidden text-center p-8 bg-white rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-4">Ready to Launch</h2>
+            <p class="text-gray-600 mb-6">This page is the `launch_uri` for a SMART on FHIR application. In a real scenario, the EHR would redirect to this page automatically. Click the button below to simulate this launch against the SMART Health IT sandbox.</p>
+            <button id="launch-button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                Launch App
+            </button>
+        </div>
+
+        <!-- This section will display patient data after a successful launch -->
+        <div id="data-view" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold border-b pb-3 mb-4 text-gray-800">Launch Successful!</h2>
+                <p class="text-green-600 bg-green-50 p-3 rounded-md">Successfully connected to the FHIR server.</p>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Patient Information</h3>
+                <div id="patient-info" class="space-y-2 text-gray-700">
+                    <!-- Patient data will be rendered here -->
+                </div>
+                 <div id="loading-patient" class="flex items-center space-x-3">
+                    <div class="loader-small border-t-blue-500"></div>
+                    <span>Loading patient data...</span>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Launch Context</h3>
+                <pre id="launch-context" class="bg-gray-100 p-4 rounded-md text-sm overflow-x-auto"></pre>
+            </div>
+        </div>
+
+        <!-- Error display -->
+        <div id="error-view" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative" role="alert">
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline" id="error-message"></span>
+        </div>
+    </div>
+
+    <!-- FHIR Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+    
+    <!-- TypeScript Application Logic -->
+    <script type="module">
+        // Helper function to render patient data
+        const renderPatient = (patient) => {
+            const patientInfoEl = document.getElementById('patient-info');
+            const loadingEl = document.getElementById('loading-patient');
+            if (!patientInfoEl || !loadingEl) return;
+
+            loadingEl.style.display = 'none';
+            
+            const name = patient.name?.[0];
+            const formattedName = name ? `${name.given.join(' ')} ${name.family}` : 'N/A';
+
+            patientInfoEl.innerHTML = `
+                <p><strong>ID:</strong> ${patient.id || 'N/A'}</p>
+                <p><strong>Name:</strong> ${formattedName}</p>
+                <p><strong>Gender:</strong> ${patient.gender || 'N/A'}</p>
+                <p><strong>Birth Date:</strong> ${patient.birthDate || 'N/A'}</p>
+            `;
+        };
+
+        // Helper function to display errors
+        const showError = (error) => {
+            console.error(error);
+            const errorView = document.getElementById('error-view');
+            const errorMessage = document.getElementById('error-message');
+            if (errorView && errorMessage) {
+                errorMessage.textContent = error.message || 'An unknown error occurred.';
+                errorView.classList.remove('hidden');
+            }
+        };
+
+        // Main application logic
+        const main = async () => {
+            const launchView = document.getElementById('launch-view');
+            const authorizingView = document.getElementById('authorizing-view');
+            const dataView = document.getElementById('data-view');
+            const launchButton = document.getElementById('launch-button');
+
+            try {
+                // Check if this is a redirect from the auth server
+                if (sessionStorage.getItem('SMART_KEY')) {
+                    authorizingView.classList.remove('hidden');
+                }
+
+                // FHIR.oauth2.ready() handles the authorization handshake.
+                // It resolves with a fhirclient.Client instance.
+                const client = await FHIR.oauth2.ready();
+
+                // If we get here, the launch is successful.
+                launchView.classList.add('hidden');
+                authorizingView.classList.add('hidden');
+                dataView.classList.remove('hidden');
+
+                // Display the launch context
+                const launchContextEl = document.getElementById('launch-context');
+                if (launchContextEl) {
+                    launchContextEl.textContent = JSON.stringify(client.getState(), null, 2);
+                }
+
+                // Fetch the patient data
+                const patient = await client.patient.read();
+                renderPatient(patient);
+
+            } catch (error) {
+                // If FHIR.oauth2.ready() fails, it means we are not in a launch sequence.
+                // This is the point where the app should initiate the launch.
+                authorizingView.classList.add('hidden');
+                launchView.classList.remove('hidden');
+                
+                if (launchButton) {
+                    const url = new URL(window.location.href);
+                    const issToken = url.searchParams.get('iss');
+                    const launchToken = url.searchParams.get('launch');
+                    console.log("issToken:", issToken, "launchToken:", launchToken);
+
+                    launchButton.onclick = () => {
+                        // Configuration for the SMART launch
+                        const config = {
+                            // The client_id is obtained when you register your app with the EHR.
+                            // For this example, we use a public client_id for the SMART sandbox.
+                            clientId: "6f57f594-597d-466a-ac4f-2d308fc38410", // Replace with your client_id
+                            
+                            // Scopes define the permissions your app is requesting.
+                            scope: "launch patient/Patient.read patient/Observation.read openid fhirUser",
+                            
+                            // The redirect_uri is where the auth server sends the user back after authorization.
+                            // It must be one of the URLs registered with the EHR.
+                            redirectUri: window.location.href,
+                            
+                            // The iss (issuer) parameter is provided by the EHR during the launch.
+                            // For standalone testing, we provide it here.
+                            iss: issToken || 'https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4/',
+
+                            // The launch token is also provided by the EHR. Since we don't have one in
+                            // a standalone launch, we leave it blank and the sandbox will create one.
+                            // launch: launchToken || ""
+                        };
+                        
+                        // Store a key to indicate we've started the launch flow
+                        sessionStorage.setItem('SMART_KEY', 'true');
+
+                        // This function redirects the browser to the authorization server.
+                        FHIR.oauth2.authorize(config).catch(showError);
+                    };
+                } else {
+                    // If the button isn't found, it's an unexpected state.
+                    showError(new Error("Launch button not found. Cannot initiate launch."));
+                }
+            }
+        };
+
+        // Run the main application logic when the page loads.
+        window.onload = main;
+    </script>
+</body>
+</html>
