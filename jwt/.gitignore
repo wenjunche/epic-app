@@ -1,0 +1,14 @@
+
+*.cer
+*.key
+*.pem
+*.p12
+*.crt
+*.jks
+*.pfx
+*.jceks
+*.jwk
+*.jwk-set
+*.jws
+*.jwe
+*.txt
