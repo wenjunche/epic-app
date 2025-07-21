@@ -54,11 +54,7 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
   );
 };
 
-/**
- * A component to initiate a standalone launch for testing purposes.
- */
-const LaunchScreen: React.FC = () => {
-    
+
   const handleLaunch = () => {
     const url = new URL(window.location.href);
     const issToken = url.searchParams.get('iss');
@@ -87,6 +83,11 @@ const LaunchScreen: React.FC = () => {
     FHIR.oauth2.authorize(config);
   };
 
+/**
+ * A component to initiate a standalone launch for testing purposes.
+ */
+const LaunchScreen: React.FC = () => {
+    
   return (
     <div className="text-center">
       <h2 className="text-2xl font-semibold mb-4">SMART on FHIR App</h2>
@@ -139,9 +140,11 @@ export default function App() {
       .catch(err => {
         // This is not an error if the app is not in a launch sequence.
         // It simply means we need to initiate the launch.
-        console.log("Not in a launch sequence. Ready to authorize.");
-        setError(null); // Clear any previous errors
-        setLoading(false);
+
+        handleLaunch(); // Initiate the launch process
+        // console.log("Not in a launch sequence. Ready to authorize.");
+        // setError(null); // Clear any previous errors
+        // setLoading(false);
       });
   }, []); // The empty dependency array ensures this runs only once on mount.
 
