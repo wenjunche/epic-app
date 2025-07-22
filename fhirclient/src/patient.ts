@@ -177,7 +177,7 @@ const broadcastPatientContext = async (parent: Patient) => {
 
 export const updatePatient = async (client: Client, patient: Patient) => {
     await broadcastPatientContext(patient);
-//    await checkAppointments(client);
-//    await checkConditions(client);
+    await checkAppointments(client);
+    await checkConditions(client);
     await checkDiagnosticReport(client);
 }

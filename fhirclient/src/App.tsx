@@ -40,7 +40,7 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
     console.log("Session reset detected. Clearing current patient.");
     setCurrentPatient(null);
     sessionStorage.clear();
-    window.location.href = 'http://localhost:3001/index.html?iss=https%3A%2F%2Flaunch.smarthealthit.org%2Fv%2Fr4%2Ffhir&launch=WzAsIiIsIiIsIkFVVE8iLDAsMCwwLCIiLCIiLCIiLCIiLCIiLCIiLCIiLDAsMSwiIl0'
+    window.location.href = `${window.location.href}?iss=https%3A%2F%2Flaunch.smarthealthit.org%2Fv%2Fr4%2Ffhir&launch=WzAsIiIsIiIsIkFVVE8iLDAsMCwwLCIiLCIiLCIiLCIiLCIiLCIiLCIiLDAsMSwiIl0`;
   }, []);
 
   useEffect(() => {
@@ -95,6 +95,8 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
     const issToken = url.searchParams.get('iss');
     const launchToken = url.searchParams.get('launch');
     console.log("issToken:", issToken, "launchToken:", launchToken);
+    const redirectUri = `${window.location.origin}${window.location.pathname}`;
+    console.log("Redirect URI:", redirectUri);
 
     // This configuration is for STANDALONE launch testing.
     // In a real EHR launch, the EHR provides the 'iss' and 'launch'
@@ -108,7 +110,7 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
       
       // The URL to redirect to after authorization.
       // This must be one of the URLs registered with the EHR.
-      redirectUri: window.location.origin,
+      redirectUri: redirectUri,
 
       // For standalone testing, you must provide the issuer URL.
       // The SMART App Launcher (https://launch.smarthealthit.org/) is the
@@ -180,6 +182,7 @@ export default function App() {
 
       })
       .catch(err => {
+        console.warn("FHIR.oauth2.ready() failed:", err);
         // This is not an error if the app is not in a launch sequence.
         // It simply means we need to initiate the launch.
 
