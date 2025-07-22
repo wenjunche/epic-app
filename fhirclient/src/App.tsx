@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import FHIR from 'fhirclient';
 import type { HumanName, Patient } from 'fhir/r4';
 import type Client from 'fhirclient/lib/Client';
@@ -32,6 +32,8 @@ const ErrorDisplay: React.FC<{ error: Error }> = ({ error }) => (
  * A component to display the patient's demographic data.
  */
 const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
+
+  const [ currentPatient, setCurrentPatient ] = useState<Patient | null>(null);
   // Helper function to safely get the patient's full name
   const getPatientName = (name: HumanName[] | undefined) => {
     if (!name || name.length === 0) return 'Unknown Name';
@@ -41,9 +43,51 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
     return `${given} ${family}`;
   };
 
+  const resetSession = useCallback(() => {
+    console.log("Session reset detected. Clearing current patient.");
+    setCurrentPatient(null);
+    sessionStorage.clear();
+    window.location.href = 'http://localhost:3001/index.html?iss=https%3A%2F%2Flaunch.smarthealthit.org%2Fv%2Fr4%2Ffhir&launch=WzAsIiIsIiIsIkFVVE8iLDAsMCwwLCIiLCIiLCIiLCIiLCIiLCIiLCIiLDAsMSwiIl0'
+  }, []);
+
+  useEffect(() => {
+    if (!patient) return;
+    if (patient.id !== currentPatient?.id) {
+      setCurrentPatient(patient);
+    }
+  }, [currentPatient?.id, patient]);
+
+  useEffect(() => {
+    console.log("Patient data:", currentPatient);
+    const broadcastPatientContext = async () => {
+      if (currentPatient) {
+        const context = {
+            type: "fdc3.patient",
+            id: {
+              value: currentPatient.id || ''
+            },
+            name: getPatientName(currentPatient.name)
+          };
+          console.log("Broadcasting context:", context);
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          await fdc3.broadcast(context);
+        };
+      }
+      broadcastPatientContext();
+  }, [currentPatient]);
+
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold text-gray-800 border-b pb-3 mb-4">Patient Information</h2>
+
+      <div className="flex items-center justify-between border-b pb-3 mb-4">
+        <h2 className="text-2xl font-bold text-gray-800">Patient Information</h2>
+        <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm" onClick={resetSession}>
+          Back
+        </button>
+      </div>
+
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
         <div><strong>Name:</strong> {getPatientName(patient.name)}</div>
         <div><strong>Gender:</strong> {patient.gender || 'N/A'}</div>
@@ -129,6 +173,7 @@ export default function App() {
         // Fetch the patient data now that we have an authorized client
         client.patient.read()
           .then(patientData => {
+            console.log("Read Patient data:", patientData);
             setPatient(patientData as Patient);
             setLoading(false);
           })
