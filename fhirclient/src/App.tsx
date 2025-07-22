@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import FHIR from 'fhirclient';
-import type { HumanName, Patient } from 'fhir/r4';
+import type { Patient } from 'fhir/r4';
 import type Client from 'fhirclient/lib/Client';
 import type { fhirclient } from 'fhirclient/lib/types';
+import { getPatientName, updatePatient } from './patient';
 
 
 /**
@@ -34,14 +35,6 @@ const ErrorDisplay: React.FC<{ error: Error }> = ({ error }) => (
 const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
 
   const [ currentPatient, setCurrentPatient ] = useState<Patient | null>(null);
-  // Helper function to safely get the patient's full name
-  const getPatientName = (name: HumanName[] | undefined) => {
-    if (!name || name.length === 0) return 'Unknown Name';
-    const officialName = name.find(n => n.use === 'official') || name[0];
-    const given = officialName.given?.join(' ') || '';
-    const family = officialName.family || '';
-    return `${given} ${family}`;
-  };
 
   const resetSession = useCallback(() => {
     console.log("Session reset detected. Clearing current patient.");
@@ -60,7 +53,7 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
   useEffect(() => {
     console.log("Patient data:", currentPatient);
     const broadcastPatientContext = async () => {
-      if (currentPatient) {
+      if (currentPatient && window.fdc3) {
         const context = {
             type: "fdc3.patient",
             id: {
@@ -69,9 +62,7 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
             name: getPatientName(currentPatient.name)
           };
           console.log("Broadcasting context:", context);
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-expect-error
-          await fdc3.broadcast(context);
+          await window.fdc3.broadcast(context);
         };
       }
       broadcastPatientContext();
@@ -174,13 +165,19 @@ export default function App() {
         client.patient.read()
           .then(patientData => {
             console.log("Read Patient data:", patientData);
-            setPatient(patientData as Patient);
             setLoading(false);
+            const newPatient = patientData as Patient;
+            // Check if the patient data has changed
+            if (!patient || patient.id !== newPatient.id) {
+              setPatient(patientData as Patient);
+              updatePatient(client, newPatient);
+            }
           })
           .catch(err => {
             setError(err);
             setLoading(false);
           });
+
       })
       .catch(err => {
         // This is not an error if the app is not in a launch sequence.
