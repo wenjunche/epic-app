@@ -97,7 +97,8 @@ const handleLaunch = () => {
   // parameters in the URL, and fhirclient handles them automatically.
   const config: fhirclient.AuthorizeParams = {
     // You must register your app with the EHR and get a client_id
-    clientId: "6f57f594-597d-466a-ac4f-2d308fc38410", // Replace with your actual client_id
+    clientId: "8ce67f9a-358d-43fb-823f-b4701166674d", // Replace with your actual client_id
+    //"6f57f594-597d-466a-ac4f-2d308fc38410", // Replace with your actual client_id
     
     // The permissions your app is requesting
     scope: "launch openid fhirUser patient/Patient.read",
@@ -109,7 +110,7 @@ const handleLaunch = () => {
     // For standalone testing, you must provide the issuer URL.
     // The SMART App Launcher (https://launch.smarthealthit.org/) is the
     // best tool for testing a true EHR launch.
-    iss: issToken || defaultISSToken, // Replace with your actual FHIR server URL
+    // iss: issToken || defaultISSToken, // Replace with your actual FHIR server URL
   };
   FHIR.oauth2.authorize(config);
 };
