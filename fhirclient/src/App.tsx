@@ -50,24 +50,6 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
     }
   }, [currentPatient?.id, patient]);
 
-  useEffect(() => {
-    console.log("Patient data:", currentPatient);
-    const broadcastPatientContext = async () => {
-      if (currentPatient && window.fdc3) {
-        const context = {
-            type: "fdc3.patient",
-            id: {
-              value: currentPatient.id || ''
-            },
-            name: getPatientName(currentPatient.name)
-          };
-          console.log("Broadcasting context:", context);
-          await window.fdc3.broadcast(context);
-        };
-      }
-      broadcastPatientContext();
-  }, [currentPatient]);
-
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
 
