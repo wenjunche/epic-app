@@ -71,7 +71,7 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
 
-      <div className="flex items-center justify-between border-b pb-3 mb-4">
+      <div className="flex items-center gap-4 border-b pb-3 mb-4">
         <h2 className="text-2xl font-bold text-gray-800">Patient Information</h2>
         <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm" onClick={resetSession}>
           Back
@@ -89,36 +89,48 @@ const PatientBanner: React.FC<{ patient: Patient }> = ({ patient }) => {
   );
 };
 
+const defaultISSToken = 'https://launch.smarthealthit.org/v/r4/fhir';
+const defaultLaunchToken = 'WzAsIiIsIiIsIkFVVE8iLDAsMCwwLCIiLCIiLCIiLCIiLCIiLCIiLCIiLDAsMSwiIl0';
 
-  const handleLaunch = () => {
-    const url = new URL(window.location.href);
-    const issToken = url.searchParams.get('iss');
-    const launchToken = url.searchParams.get('launch');
-    console.log("issToken:", issToken, "launchToken:", launchToken);
-    const redirectUri = `${window.location.origin}${window.location.pathname}`;
-    console.log("Redirect URI:", redirectUri);
+const handleLaunch = () => {
+  const url = new URL(window.location.href);
+  const issToken = url.searchParams.get('iss');
+  const launchToken = url.searchParams.get('launch');
+  console.log("issToken:", issToken, "launchToken:", launchToken);
+  const redirectUri = `${window.location.origin}${window.location.pathname}`;
+  console.log("Redirect URI:", redirectUri);
 
-    // This configuration is for STANDALONE launch testing.
-    // In a real EHR launch, the EHR provides the 'iss' and 'launch'
-    // parameters in the URL, and fhirclient handles them automatically.
-    const config: fhirclient.AuthorizeParams = {
-      // You must register your app with the EHR and get a client_id
-      clientId: "6f57f594-597d-466a-ac4f-2d308fc38410", // Replace with your actual client_id
-      
-      // The permissions your app is requesting
-      scope: "launch openid fhirUser patient/Patient.read",
-      
-      // The URL to redirect to after authorization.
-      // This must be one of the URLs registered with the EHR.
-      redirectUri: redirectUri,
+  if (!issToken) {
+    console.warn("No 'iss' parameter found in the URL. Using default FHIR server URL.");
+    const redirectUrl = new URL(redirectUri);
+    redirectUrl.searchParams.set('iss', defaultISSToken);
+    redirectUrl.searchParams.set('launch', defaultLaunchToken);
+    console.log("Redirecting to:", redirectUrl.toString());
+    window.location.href = redirectUrl.toString();
+    return;
+  }
 
-      // For standalone testing, you must provide the issuer URL.
-      // The SMART App Launcher (https://launch.smarthealthit.org/) is the
-      // best tool for testing a true EHR launch.
-      iss: issToken || '', // Replace with your actual FHIR server URL
-    };
-    FHIR.oauth2.authorize(config);
+  // This configuration is for STANDALONE launch testing.
+  // In a real EHR launch, the EHR provides the 'iss' and 'launch'
+  // parameters in the URL, and fhirclient handles them automatically.
+  const config: fhirclient.AuthorizeParams = {
+    // You must register your app with the EHR and get a client_id
+    clientId: "6f57f594-597d-466a-ac4f-2d308fc38410", // Replace with your actual client_id
+    
+    // The permissions your app is requesting
+    scope: "launch openid fhirUser patient/Patient.read",
+    
+    // The URL to redirect to after authorization.
+    // This must be one of the URLs registered with the EHR.
+    redirectUri: redirectUri,
+
+    // For standalone testing, you must provide the issuer URL.
+    // The SMART App Launcher (https://launch.smarthealthit.org/) is the
+    // best tool for testing a true EHR launch.
+    iss: issToken || defaultISSToken, // Replace with your actual FHIR server URL
   };
+  FHIR.oauth2.authorize(config);
+};
 
 /**
  * A component to initiate a standalone launch for testing purposes.
