@@ -203,17 +203,11 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="w-full min-h-screen bg-gray-50 flex justify-center p-4">
       <main className="w-full max-w-4xl mx-auto">
         {patient && client ? (
           <div className="space-y-6">
             <PatientBanner patient={patient} />
-            <div className="p-6 bg-white rounded-lg shadow-md">
-              <h3 className="text-xl font-bold text-gray-800 mb-3">Launch Context</h3>
-              <pre className="p-3 text-sm bg-gray-100 text-gray-900 rounded overflow-x-auto">
-                {JSON.stringify(client.getState(), null, 2)}
-              </pre>
-            </div>
           </div>
         ) : (
           <LaunchScreen />
