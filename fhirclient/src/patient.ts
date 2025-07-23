@@ -153,6 +153,8 @@ const broadcast = async (context: unknown) => {
     if (window.fdc3) {
         console.log("Broadcasting context:", context);
         await window.fdc3.broadcast(context);
+    } else {
+        console.warn("FDC3 is not available on the window object.", context);
     };
 }
 
@@ -166,12 +168,22 @@ export const getPatientName = (name: HumanName[] | undefined) => {
 };
 
 const broadcastPatientContext = async (parent: Patient) => {
+    const addresses = parent.address?.map(addr => ({
+            line: addr.line?.join(' '),
+            city: addr.city || '',
+            state: addr.state || '',
+            postalCode: addr.postalCode || '',
+            country: addr.country || ''
+        })) || [];
     await broadcast({
         type: "fdc3.patient",
         id: {
             value: parent.id || ''
         },
-        name: getPatientName(parent.name)
+        name: getPatientName(parent.name),
+        gender: parent.gender || '',
+        birthDate: parent.birthDate || '',
+        address: addresses[0] || {},
     });
 };
 

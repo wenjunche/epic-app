@@ -153,6 +153,7 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    console.log("App mounted. Checking for existing patient data...");
     /**
      * FHIR.oauth2.ready() is the core of the client. It handles the OAuth2 redirect
      * and returns a Promise that resolves with a fhirclient.Client instance.
@@ -162,6 +163,7 @@ export default function App() {
      */
     FHIR.oauth2.ready()
       .then(client => {
+        console.log('FHIR.oauth2.ready() succeeded');
         setClient(client);
         // Fetch the patient data now that we have an authorized client
         client.patient.read()
@@ -169,10 +171,14 @@ export default function App() {
             console.log("Read Patient data:", patientData);
             setLoading(false);
             const newPatient = patientData as Patient;
-            // Check if the patient data has changed
-            if (!patient || patient.id !== newPatient.id) {
-              setPatient(patientData as Patient);
-              updatePatient(client, newPatient);
+            if (newPatient) { 
+              // Check if the patient data has changed
+              if (!patient || patient.id !== newPatient.id) {
+                setPatient(patientData as Patient);
+                updatePatient(client, newPatient);
+              } else {
+                console.log("Patient data has not changed, skipping update.");
+              }
             }
           })
           .catch(err => {
