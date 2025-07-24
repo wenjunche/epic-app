@@ -78,11 +78,17 @@ const handleLaunch = () => {
   const url = new URL(window.location.href);
   const issToken = url.searchParams.get('iss');
   const launchToken = url.searchParams.get('launch');
+  const errorCode = url.searchParams.get('error');
   console.log("issToken:", issToken, "launchToken:", launchToken);
   const redirectUri = `${window.location.origin}${window.location.pathname}`;
   console.log("Redirect URI:", redirectUri);
 
-  if (!issToken) {
+  if (errorCode) {
+    console.error("Error during launch:", errorCode);
+    alert(`Launch failed: ${errorCode}`);
+    return;
+  }
+  if (!issToken || !launchToken) {
     console.warn("No 'iss' parameter found in the URL. Using default FHIR server URL.");
     const redirectUrl = new URL(redirectUri);
     redirectUrl.searchParams.set('iss', defaultISSToken);
@@ -92,6 +98,8 @@ const handleLaunch = () => {
     return;
   }
 
+  FHIR.oauth2.settings.fullSessionStorageSupport = false; // Disable full session storage support for simplicity
+  
   // This configuration is for STANDALONE launch testing.
   // In a real EHR launch, the EHR provides the 'iss' and 'launch'
   // parameters in the URL, and fhirclient handles them automatically.
@@ -148,7 +156,10 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    localStorage.debug = "FHIR:*";
+
     console.log("App mounted. Checking for existing patient data...");
+    FHIR.oauth2.settings.fullSessionStorageSupport = false; // Disable full session storage support for simplicity
     /**
      * FHIR.oauth2.ready() is the core of the client. It handles the OAuth2 redirect
      * and returns a Promise that resolves with a fhirclient.Client instance.
@@ -177,6 +188,7 @@ export default function App() {
             }
           })
           .catch(err => {
+            console.error("Error reading Patient data:", err);
             setError(err);
             setLoading(false);
           });
