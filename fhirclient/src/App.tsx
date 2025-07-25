@@ -78,11 +78,17 @@ const handleLaunch = () => {
   const url = new URL(window.location.href);
   const issToken = url.searchParams.get('iss');
   const launchToken = url.searchParams.get('launch');
+  const errorCode = url.searchParams.get('error');
   console.log("issToken:", issToken, "launchToken:", launchToken);
   const redirectUri = `${window.location.origin}${window.location.pathname}`;
   console.log("Redirect URI:", redirectUri);
 
-  if (!issToken) {
+  if (errorCode) {
+    console.error("Error during launch:", errorCode);
+    alert(`Launch failed: ${errorCode}`);
+    return;
+  }
+  if (!issToken || !launchToken) {
     console.warn("No 'iss' parameter found in the URL. Using default FHIR server URL.");
     const redirectUrl = new URL(redirectUri);
     redirectUrl.searchParams.set('iss', defaultISSToken);
@@ -92,12 +98,15 @@ const handleLaunch = () => {
     return;
   }
 
+  FHIR.oauth2.settings.fullSessionStorageSupport = false; // Disable full session storage support for simplicity
+  
   // This configuration is for STANDALONE launch testing.
   // In a real EHR launch, the EHR provides the 'iss' and 'launch'
   // parameters in the URL, and fhirclient handles them automatically.
   const config: fhirclient.AuthorizeParams = {
     // You must register your app with the EHR and get a client_id
-    clientId: "6f57f594-597d-466a-ac4f-2d308fc38410", // Replace with your actual client_id
+    clientId: "8ce67f9a-358d-43fb-823f-b4701166674d", // Replace with your actual client_id
+    //"6f57f594-597d-466a-ac4f-2d308fc38410", // Replace with your actual client_id
     
     // The permissions your app is requesting
     scope: "launch openid fhirUser patient/Patient.read",
@@ -109,7 +118,7 @@ const handleLaunch = () => {
     // For standalone testing, you must provide the issuer URL.
     // The SMART App Launcher (https://launch.smarthealthit.org/) is the
     // best tool for testing a true EHR launch.
-    iss: issToken || defaultISSToken, // Replace with your actual FHIR server URL
+    // iss: issToken || defaultISSToken, // Replace with your actual FHIR server URL
   };
   FHIR.oauth2.authorize(config);
 };
@@ -147,7 +156,10 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    localStorage.debug = "FHIR:*";
+
     console.log("App mounted. Checking for existing patient data...");
+    FHIR.oauth2.settings.fullSessionStorageSupport = false; // Disable full session storage support for simplicity
     /**
      * FHIR.oauth2.ready() is the core of the client. It handles the OAuth2 redirect
      * and returns a Promise that resolves with a fhirclient.Client instance.
@@ -176,6 +188,7 @@ export default function App() {
             }
           })
           .catch(err => {
+            console.error("Error reading Patient data:", err);
             setError(err);
             setLoading(false);
           });
