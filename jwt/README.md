@@ -1,5 +1,16 @@
 # Hyerdrive integration with websocket
 
+## Session Discovery for Hyperdrive
+~~~
+cd C:\Program Files (x86)\Epic\Hyperdrive\VersionIndependent
+
+Launcher.exe id=100 env=openEpicProduction
+
+
+curl {hub.url}/subspace-configuration
+
+~~~
+
 ## Key pair for Hyperdrive
 ~~~
 #create keys
